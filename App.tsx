@@ -13,6 +13,7 @@ import {
   Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+// @ts-ignore - Suppressing type errors for the external module
 import Icon from 'react-native-vector-icons/FontAwesome';
 
 const API_BASE = 'http://10.0.2.2:5000';
@@ -109,17 +110,17 @@ const App = () => {
     <Modal animationType="slide" transparent visible={menuVisible}>
       <View style={styles.menuContainer}>
         <View style={styles.menuBox}>
-          {[{ name: 'Profile', key: 'profile' },
-            { name: 'Money Transfer', key: 'transfer' },
-            { name: 'Loans', key: 'loans' },
-            { name: 'Transaction History', key: 'transactions' },
-            { name: 'Virtual Cards', key: 'cards' },
-            { name: 'Bill Payments', key: 'bills' },
-            { name: 'Check Balance', key: 'balance' },
-            ...(isAdmin ? [{ name: 'Admin Panel', key: 'admin' }] : [])
+          {[{ name: 'Profile', key: 'profile' as const },
+            { name: 'Money Transfer', key: 'transfer' as const },
+            { name: 'Loans', key: 'loans' as const },
+            { name: 'Transaction History', key: 'transactions' as const },
+            { name: 'Virtual Cards', key: 'cards' as const },
+            { name: 'Bill Payments', key: 'bills' as const },
+            { name: 'Check Balance', key: 'balance' as const },
+            ...(isAdmin ? [{ name: 'Admin Panel', key: 'admin' as const }] : [])
           ].map(({ name, key }, i) => (
             <TouchableOpacity key={i} onPress={() => { setScreen(key); setMenuVisible(false); }}>
-              <Text style={styles.menuItem}>{name}</Text>
+              <Text style={styles.menuText}>{name}</Text>
             </TouchableOpacity>
           ))}
 
@@ -200,9 +201,42 @@ const App = () => {
       <SafeAreaView style={styles.screen}>
         {renderHeader()}
         <View style={styles.headerSpacer} />
-        <ScrollView contentContainerStyle={styles.contentCenter}>
-          <TextInput style={styles.input} placeholder="Account Number" value={accountNumber} onChangeText={setAccountNumber} />
-          <Button title="View Transactions" onPress={fetchTransactions} />
+        <ScrollView contentContainerStyle={styles.dashboardContainer}>
+          {/* User profile section */}
+          <View style={styles.profileSection}>
+            <View style={styles.avatarContainer}>
+              <Icon name="user-circle" size={80} color="#ccc" />
+            </View>
+            <TouchableOpacity style={styles.uploadButton}>
+              <Text style={styles.uploadButtonText}>Upload photo</Text>
+            </TouchableOpacity>
+            <Text style={styles.welcomeText}>Welcome, {username}</Text>
+          </View>
+          
+          {/* Dashboard grid menu */}
+          <View style={styles.menuGrid}>
+            <View style={styles.menuRow}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setScreen('balance')}>
+                <Text style={styles.menuItemText}>Balance</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setScreen('transfer')}>
+                <Text style={styles.menuItemText}>Transfer</Text>
+              </TouchableOpacity>
+            </View>
+            <View style={styles.menuRow}>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setScreen('loans')}>
+                <Text style={styles.menuItemText}>Loan</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={styles.menuItem} onPress={() => setScreen('transactions')}>
+                <Text style={styles.menuItemText}>Transaction History</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+          
+          {/* Home button indicator */}
+          <View style={styles.homeIndicator}>
+            <View style={styles.homeIndicatorButton} />
+          </View>
         </ScrollView>
         {renderMenu()}
       </SafeAreaView>
@@ -246,6 +280,67 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     padding: 20,
+  },
+  dashboardContainer: {
+    flex: 1,
+    alignItems: 'center',
+    padding: 20,
+  },
+  profileSection: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  avatarContainer: {
+    marginBottom: 10,
+  },
+  uploadButton: {
+    backgroundColor: '#0074D9',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 5,
+    marginVertical: 10,
+  },
+  uploadButtonText: {
+    color: '#ffffff',
+    fontWeight: 'bold',
+  },
+  welcomeText: {
+    color: '#ffffff',
+    fontSize: 18,
+    marginTop: 10,
+  },
+  menuGrid: {
+    width: '100%',
+    marginTop: 20,
+  },
+  menuRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  menuItem: {
+    backgroundColor: '#ffffff',
+    width: '48%',
+    height: 80,
+    borderRadius: 10,
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#e0e0e0',
+  },
+  menuItemText: {
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  homeIndicator: {
+    alignItems: 'center',
+    marginTop: 40,
+  },
+  homeIndicatorButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#000000',
   },
   fixedTopBar: {
     position: 'absolute',
@@ -311,7 +406,7 @@ const styles = StyleSheet.create({
     width: '80%',
     height: '100%',
   },
-  menuItem: {
+  menuText: {
     fontSize: 18,
     marginBottom: 15,
   },
