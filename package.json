@@ -10,8 +10,10 @@
     "test": "jest"
   },
   "dependencies": {
+    "@react-native-async-storage/async-storage": "^2.1.2",
     "react": "19.0.0",
-    "react-native": "0.79.1"
+    "react-native": "0.79.1",
+    "react-native-vector-icons": "^10.2.0"
   },
   "devDependencies": {
     "@babel/core": "^7.25.2",
