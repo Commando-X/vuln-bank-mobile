@@ -6,9 +6,21 @@ This mobile app acts as a frontend for the [Vulnerable Bank API](https://github.
 
 ---
 
+## 📥 Download and Run Instantly (Recommended)
+
+> 🆕 You can now download the compiled `.apk` directly from GitHub Releases.
+
+- 📦 [Download Latest APK](https://github.com/Commando-X/vuln-bank-mobile/releases/latest)
+- ⚠️ Enable **Install Unknown Apps** on your Android device
+- 🚫 No need to build anything — just install and start testing!
+
+> This APK includes all vulnerable features, static secrets, and works offline with your own hosted API server.
+
+---
+
 ## 📲 Features
 
-- 🔓 Insecure login with hardcoded credentials (`admin:admin123`)
+- 🔓 Insecure login with hardcoded credentials
 - 🔍 Debug API endpoint exposed in the APK
 - 🛑 Plaintext storage of credentials and balance in SharedPreferences
 - 🔑 Hardcoded JWT tokens in source code
@@ -40,7 +52,7 @@ Security professionals, students, and educators who want to:
 
 ---
 
-## 🚀 Getting Started
+## 🚧 Build It Yourself (Optional)
 
 ### 🧱 Requirements
 
@@ -109,9 +121,6 @@ npx react-native run-android
 > ![image](https://github.com/user-attachments/assets/33f43c66-dcb1-467e-b076-66e91d028288)
 > ![image](https://github.com/user-attachments/assets/6f80f404-823b-46e7-9c4e-841a1727cff9)
 > ![image](https://github.com/user-attachments/assets/ad31551a-d0e5-4627-92d8-d0bb8c39abe8)
-
-
-
 
 ---
 
