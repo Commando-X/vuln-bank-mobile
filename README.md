@@ -1,97 +1,130 @@
-This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
+# 💳 Vulnerable Bank Mobile App
 
-# Getting Started
+**Vulnerable Bank** is an intentionally insecure mobile application built for security engineers, penetration testers, and mobile app security learners to practice and demonstrate real-world exploitation of insecure coding practices.
 
-> **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
+This mobile app acts as a frontend for the [Vulnerable Bank API](https://github.com/Commando-X/vuln-bank), a purposely vulnerable web API with typical banking features.
 
-## Step 1: Start Metro
+---
 
-First, you will need to run **Metro**, the JavaScript build tool for React Native.
+## 📲 Features
 
-To start the Metro dev server, run the following command from the root of your React Native project:
+- 🔓 Insecure login with hardcoded credentials (`admin:admin123`)
+- 🔍 Debug API endpoint exposed in the APK
+- 🛑 Plaintext storage of credentials and balance in SharedPreferences
+- 🔑 Hardcoded JWT tokens in source code
+- 🔒 OWASP Mobile Top 10 Vulnerabilities including:
+  - M1: Improper Platform Usage
+  - M2: Insecure Data Storage
+  - M4: Insecure Authentication
+  - M5: Insufficient Cryptography
+  - M9: Reverse Engineering
+- 💾 Static secrets exposed in `AndroidManifest.xml`
+- 📱 Emulates a realistic banking app with:
+  - Balance check
+  - Money transfer
+  - Transaction history
+  - Loans
+  - Virtual cards
+  - Admin-only hidden panel
 
-```sh
-# Using npm
-npm start
+---
 
-# OR using Yarn
-yarn start
+## 🧪 Who Is It For?
+
+Security professionals, students, and educators who want to:
+
+- Practice Android security testing (JADX, Frida, MobSF, Burp Suite, etc.)
+- Demonstrate OWASP Mobile Top 10 risks
+- Build or demo mobile DevSecOps pipelines
+- Run Capture-the-Flag (CTF) scenarios or internal red team labs
+
+---
+
+## 🚀 Getting Started
+
+### 🧱 Requirements
+
+- Node.js v18+
+- Android Studio (with emulator or physical device)
+- Java JDK 11+
+- Git
+
+### 📦 Installation
+
+```bash
+git clone https://github.com/Commando-X/vuln-bank-mobile
+cd vuln-bank-mobile
+npm install
 ```
 
-## Step 2: Build and run your app
+Start Metro server:
 
-With Metro running, open a new terminal window/pane from the root of your React Native project, and use one of the following commands to build and run your Android or iOS app:
-
-### Android
-
-```sh
-# Using npm
-npm run android
-
-# OR using Yarn
-yarn android
+```bash
+npx react-native start
 ```
 
-### iOS
+In another terminal:
 
-For iOS, remember to install CocoaPods dependencies (this only needs to be run on first clone or after updating native deps).
-
-The first time you create a new project, run the Ruby bundler to install CocoaPods itself:
-
-```sh
-bundle install
+```bash
+npx react-native run-android
 ```
 
-Then, and every time you update your native dependencies, run:
+> ⚠️ If testing on a real device, make sure to:
+> - Update `API_BASE` in `App.tsx` with your server’s IP
+> - Allow HTTP traffic by setting `android:usesCleartextTraffic="true"` in your manifest
 
-```sh
-bundle exec pod install
-```
+---
 
-For more information, please visit [CocoaPods Getting Started guide](https://guides.cocoapods.org/using/getting-started.html).
+## 🧠 Fun Security Challenges Inside
 
-```sh
-# Using npm
-npm run ios
+- Can you extract the admin JWT?
+- Can you discover the debug API and access hidden user data?
+- Can you reverse engineer the APK and find credentials in SharedPreferences?
+- Can you tamper with API requests?
 
-# OR using Yarn
-yarn ios
-```
+---
 
-If everything is set up correctly, you should see your new app running in the Android Emulator, iOS Simulator, or your connected device.
+## 🧑‍💻 Dev Notes
 
-This is one way to run your app — you can also build it directly from Android Studio or Xcode.
+- Written in **React Native (TypeScript)**
+- Icons from `react-native-vector-icons`
+- Emulator-friendly, but can be bundled for real Android devices
+- Secrets deliberately placed in:
+  - Java/Kotlin source code
+  - SharedPreferences
+  - AndroidManifest.xml
 
-## Step 3: Modify your app
+---
 
-Now that you have successfully run the app, let's make changes!
+## 🛡 Disclaimer
 
-Open `App.tsx` in your text editor of choice and make some changes. When you save, your app will automatically update and reflect these changes — this is powered by [Fast Refresh](https://reactnative.dev/docs/fast-refresh).
+> This app is intended **strictly for educational purposes**.  
+> Do **NOT** install this app on real production devices or use with real financial data.  
+> All API endpoints are intentionally insecure and should only be used in isolated testing environments.
 
-When you want to forcefully reload, for example to reset the state of your app, you can perform a full reload:
+---
 
-- **Android**: Press the <kbd>R</kbd> key twice or select **"Reload"** from the **Dev Menu**, accessed via <kbd>Ctrl</kbd> + <kbd>M</kbd> (Windows/Linux) or <kbd>Cmd ⌘</kbd> + <kbd>M</kbd> (macOS).
-- **iOS**: Press <kbd>R</kbd> in iOS Simulator.
+## 📸 Screenshots
 
-## Congratulations! :tada:
+> 
 
-You've successfully run and modified your React Native App. :partying_face:
+---
 
-### Now what?
+## 👨‍🎓 Author
 
-- If you want to add this new React Native code to an existing application, check out the [Integration guide](https://reactnative.dev/docs/integration-with-existing-apps).
-- If you're curious to learn more about React Native, check out the [docs](https://reactnative.dev/docs/getting-started).
+**Badmus Al-Amir**  
+Security Engineer • API Security Advocate • Mobile AppSec Educator  
+[LinkedIn](https://linkedin.com/in/badmus-al-amir) • [GitHub](https://github.com/Commando-X)
 
-# Troubleshooting
+---
 
-If you're having issues getting the above steps to work, see the [Troubleshooting](https://reactnative.dev/docs/troubleshooting) page.
+## 📂 Related Projects
 
-# Learn More
+- [💻 Vulnerable Bank API (Flask)](https://github.com/Commando-X/vuln-bank)
+- [📱 Android Static/Dynamic Testing Scripts (Frida, MobSF, etc)](https://github.com/Commando-X/)
 
-To learn more about React Native, take a look at the following resources:
+---
 
-- [React Native Website](https://reactnative.dev) - learn more about React Native.
-- [Getting Started](https://reactnative.dev/docs/environment-setup) - an **overview** of React Native and how setup your environment.
-- [Learn the Basics](https://reactnative.dev/docs/getting-started) - a **guided tour** of the React Native **basics**.
-- [Blog](https://reactnative.dev/blog) - read the latest official React Native **Blog** posts.
-- [`@facebook/react-native`](https://github.com/facebook/react-native) - the Open Source; GitHub **repository** for React Native.
+## 🏁 License
+
+MIT — use it, break it, teach with it 🧠
