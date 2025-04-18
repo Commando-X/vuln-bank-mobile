@@ -1,4 +1,5 @@
 # 💳 Vulnerable Bank Mobile App
+![logo](https://github.com/user-attachments/assets/a1b07585-3b60-400c-a10e-2daffa1f31ad)
 
 **Vulnerable Bank** is an intentionally insecure mobile application built for security engineers, penetration testers, and mobile app security learners to practice and demonstrate real-world exploitation of insecure coding practices.
 
