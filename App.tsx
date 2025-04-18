@@ -1,43 +1,478 @@
 import React, { useState, useEffect } from 'react';
-import {
-  View,
-  Text,
-  TextInput,
-  Button,
-  StyleSheet,
-  ScrollView,
-  Alert,
-  TouchableOpacity,
-  Modal,
-  SafeAreaView,
-  Platform,
-} from 'react-native';
+import { SafeAreaView, StyleSheet, View, Text, TextInput, Button, Alert, Platform, FlatList, ActivityIndicator, TouchableOpacity, Modal } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-// @ts-ignore - Suppressing type errors for the external module
 import Icon from 'react-native-vector-icons/FontAwesome';
 
-const API_BASE = 'http://10.0.2.2:5000';
-const HIDDEN_DEBUG_ENDPOINT = '/debug/users';
-const HARDCODED_ADMIN = { username: 'admin', password: 'admin123' };
+// Screen Components
+const WelcomeScreen: React.FC<{ onLoginPress: () => void; onRegisterPress: () => void }> = ({ onLoginPress, onRegisterPress }) => (
+  <View style={styles.centeredContainer}>
+    <Text style={styles.title}>Welcome</Text>
+    <CustomButton title="Login" onPress={onLoginPress} isFullWidth />
+    <CustomButton title="Register" onPress={onRegisterPress} isFullWidth />
+  </View>
+);
 
-const App = () => {
-  const [screen, setScreen] = useState<'welcome' | 'login' | 'register' | 'dashboard' | 'transactions' | 'profile' | 'transfer' | 'loans' | 'cards' | 'bills' | 'admin' | 'balance'>('welcome');
-  const [menuVisible, setMenuVisible] = useState(false);
+const LoginScreen: React.FC<{ onLogin: (username: string, password: string) => void; onRegisterPress: () => void }> = ({ onLogin, onRegisterPress }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  // const [email, setEmail] = useState('');
+  return (
+    <View style={styles.centeredContainer}>
+      <Text style={styles.title}>Login</Text>
+      <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} placeholderTextColor="#aaa" />
+      <TextInput style={styles.input} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="#aaa" />
+      <CustomButton title="Login" onPress={() => onLogin(username, password)} isFullWidth />
+      <CustomButton title="Register" onPress={onRegisterPress} isFullWidth />
+    </View>
+  );
+};
+
+const RegisterScreen: React.FC<{ onRegister: (username: string, password: string) => void; onLoginPress: () => void }> = ({ onRegister, onLoginPress }) => {
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  return (
+    <View style={styles.centeredContainer}>
+      <Text style={styles.title}>Register</Text>
+      <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} placeholderTextColor="#aaa" />
+      <TextInput style={styles.input} placeholder="Password" value={password} onChangeText={setPassword} secureTextEntry placeholderTextColor="#aaa" />
+      <CustomButton title="Register" onPress={() => onRegister(username, password)} isFullWidth />
+      <CustomButton title="Login" onPress={onLoginPress} isFullWidth />
+    </View>
+  );
+};
+
+const DashboardScreen: React.FC<{ username: string; onNavigate: (screen: ScreenType) => void }> = ({ username, onNavigate }) => {
+  const dashboardButtons = [
+    { title: 'Check Balance', icon: 'money', screen: 'balance' },
+    { title: 'Transfer Money', icon: 'exchange', screen: 'transfer' },
+    { title: 'Profile', icon: 'user', screen: 'profile' },
+    { title: 'Transaction History', icon: 'history', screen: 'transactions' },
+    { title: 'Loans', icon: 'hand-holding-usd', screen: 'loans' },
+    { title: 'Virtual Cards', icon: 'credit-card', screen: 'cards' },
+    { title: 'Bill Payments', icon: 'file-invoice', screen: 'bills' },
+  ];
+
+  return (
+    <View style={styles.centeredContainer}>
+      <Text style={styles.title}>Welcome, {username}</Text>
+      <View style={styles.buttonGrid}>
+        {dashboardButtons.map((btn, index) => (
+          <CustomButton key={index} title={btn.title} iconName={btn.icon} onPress={() => onNavigate(btn.screen as ScreenType)} />
+        ))}
+      </View>
+    </View>
+  );
+};
+
+const BalanceScreen: React.FC<{ jwt: string; accountNumber: string }> = ({ jwt, accountNumber }) => {
+  const [balance, setBalance] = useState<number | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/check_balance/${accountNumber}`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        const data = await response.json();
+        if (response.ok) setBalance(data.balance);
+        else setError(data.message || 'Failed to fetch balance');
+      } catch {
+        setError('Network error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchBalance();
+  }, [jwt, accountNumber]);
+
+  if (loading) return <Text style={styles.loadingText}>Loading...</Text>;
+  if (error) return <Text style={styles.errorText}>{error}</Text>;
+  return (
+    <View style={styles.centeredContainer}>
+      <Text style={styles.title}>Account Balance</Text>
+      <Text style={styles.balanceText}>₦{balance?.toFixed(2)}</Text>
+    </View>
+  );
+};
+
+const TransferScreen: React.FC<{ jwt: string; accountNumber: string }> = ({ jwt, accountNumber }) => {
+  const [toAccount, setToAccount] = useState('');
+  const [amount, setAmount] = useState('');
+  const [description, setDescription] = useState('');
+
+  const handleTransfer = async () => {
+    if (!toAccount || !amount) return Alert.alert('Error', 'Please fill in all required fields');
+    try {
+      const response = await fetch(`${API_BASE}/transfer`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({ from_account: accountNumber, to_account: toAccount, amount: parseFloat(amount), description }),
+      });
+      const data = await response.json();
+      Alert.alert(response.ok ? 'Success' : 'Error', response.ok ? 'Transfer completed successfully' : data.message || 'Transfer failed');
+    } catch {
+      Alert.alert('Error', 'Unable to connect');
+    }
+  };
+
+  return (
+    <View style={styles.centeredContainer}>
+      <Text style={styles.title}>Money Transfer</Text>
+      <TextInput style={styles.input} placeholder="To Account Number" value={toAccount} onChangeText={setToAccount} placeholderTextColor="#aaa" />
+      <TextInput style={styles.input} placeholder="Amount" value={amount} onChangeText={setAmount} keyboardType="numeric" placeholderTextColor="#aaa" />
+      <TextInput style={styles.input} placeholder="Description (optional)" value={description} onChangeText={setDescription} placeholderTextColor="#aaa" />
+      <CustomButton title="Transfer" onPress={handleTransfer} isFullWidth />
+    </View>
+  );
+};
+
+const ProfileScreen: React.FC<{ jwt: string; username: string }> = ({ jwt, username }) => (
+  <View style={styles.centeredContainer}>
+    <Text style={styles.title}>Profile</Text>
+    <Text style={styles.username}>Username: {username}</Text>
+  </View>
+);
+
+const TransactionsScreen: React.FC<{ jwt: string; accountNumber: string }> = ({ jwt, accountNumber }) => {
+  const [transactions, setTransactions] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/transactions/${accountNumber}`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        const data = await response.json();
+        if (response.ok) setTransactions(data.transactions);
+        else setError(data.message || 'Failed to fetch transactions');
+      } catch {
+        setError('Network error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchTransactions();
+  }, [jwt, accountNumber]);
+
+  if (loading) return <ActivityIndicator size="large" color="#fff" />;
+  if (error) return <Text style={styles.errorText}>{error}</Text>;
+  return (
+    <View style={styles.centeredContainer}>
+      <Text style={styles.title}>Transaction History</Text>
+      <FlatList
+        data={transactions}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.transactionItem}>
+            <Text>From: {item.from_account}</Text>
+            <Text>To: {item.to_account}</Text>
+            <Text>Amount: ₦{item.amount}</Text>
+            <Text>Time: {item.timestamp}</Text>
+          </View>
+        )}
+      />
+    </View>
+  );
+};
+
+const LoansScreen: React.FC<{ jwt: string }> = ({ jwt }) => {
+  const [amount, setAmount] = useState('');
+
+  const handleRequestLoan = async () => {
+    if (!amount) return Alert.alert('Error', 'Please enter an amount');
+    try {
+      const response = await fetch(`${API_BASE}/request_loan`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({ amount: parseFloat(amount) }),
+      });
+      const data = await response.json();
+      Alert.alert(response.ok ? 'Success' : 'Error', response.ok ? 'Loan request submitted' : data.message || 'Request failed');
+    } catch {
+      Alert.alert('Error', 'Unable to connect');
+    }
+  };
+
+  return (
+    <View style={styles.centeredContainer}>
+      <Text style={styles.title}>Request a Loan</Text>
+      <TextInput style={styles.input} placeholder="Loan Amount" value={amount} onChangeText={setAmount} keyboardType="numeric" placeholderTextColor="#aaa" />
+      <CustomButton title="Request Loan" onPress={handleRequestLoan} isFullWidth />
+    </View>
+  );
+};
+
+const CardsScreen: React.FC<{ jwt: string }> = ({ jwt }) => {
+  const [cards, setCards] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCards = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/virtual-cards`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        const data = await response.json();
+        if (response.ok) setCards(data.cards);
+        else setError(data.message || 'Failed to fetch cards');
+      } catch {
+        setError('Network error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCards();
+  }, [jwt]);
+
+  const handleCreateCard = async () => {
+    try {
+      const response = await fetch(`${API_BASE}/api/virtual-cards/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({ card_limit: 1000, card_type: 'standard' }), // Default values
+      });
+      const data = await response.json();
+      if (response.ok) {
+        setCards([...cards, data.card_details]);
+        Alert.alert('Success', 'Card created successfully');
+      } else {
+        Alert.alert('Error', data.message || 'Failed to create card');
+      }
+    } catch {
+      Alert.alert('Error', 'Unable to connect');
+    }
+  };
+
+  if (loading) return <ActivityIndicator size="large" color="#fff" />;
+  if (error) return <Text style={styles.errorText}>{error}</Text>;
+  return (
+    <View style={styles.centeredContainer}>
+      <Text style={styles.title}>Virtual Cards</Text>
+      <FlatList
+        data={cards}
+        keyExtractor={(item) => item.id.toString()}
+        renderItem={({ item }) => (
+          <View style={styles.cardItem}>
+            <Text>Card Number: {item.card_number}</Text>
+            <Text>CVV: {item.cvv}</Text>
+            <Text>Expiry: {item.expiry_date}</Text>
+          </View>
+        )}
+      />
+      <CustomButton title="Create New Card" onPress={handleCreateCard} isFullWidth />
+    </View>
+  );
+};
+
+const BillsScreen: React.FC<{ jwt: string }> = ({ jwt }) => {
+  const [categories, setCategories] = useState<any[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<number | null>(null);
+  const [billers, setBillers] = useState<any[]>([]);
+  const [selectedBiller, setSelectedBiller] = useState<number | null>(null);
+  const [amount, setAmount] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch(`${API_BASE}/api/bill-categories`, {
+          headers: { Authorization: `Bearer ${jwt}` },
+        });
+        const data = await response.json();
+        if (response.ok) setCategories(data.categories);
+        else setError(data.message || 'Failed to fetch categories');
+      } catch {
+        setError('Network error');
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchCategories();
+  }, [jwt]);
+
+  const fetchBillers = async (categoryId: number) => {
+    try {
+      const response = await fetch(`${API_BASE}/api/billers/by-category/${categoryId}`, {
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      const data = await response.json();
+      if (response.ok) setBillers(data.billers);
+      else setError(data.message || 'Failed to fetch billers');
+    } catch {
+      setError('Network error');
+    }
+  };
+
+  const handleSelectCategory = (categoryId: number) => {
+    setSelectedCategory(categoryId);
+    fetchBillers(categoryId);
+  };
+
+  const handlePayBill = async () => {
+    if (!selectedBiller || !amount) return Alert.alert('Error', 'Please select a biller and enter an amount');
+    try {
+      const response = await fetch(`${API_BASE}/api/bill-payments/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({ biller_id: selectedBiller, amount: parseFloat(amount), payment_method: 'balance' }),
+      });
+      const data = await response.json();
+      Alert.alert(response.ok ? 'Success' : 'Error', response.ok ? 'Payment successful' : data.message || 'Payment failed');
+    } catch {
+      Alert.alert('Error', 'Unable to connect');
+    }
+  };
+
+  if (loading) return <ActivityIndicator size="large" color="#fff" />;
+  if (error) return <Text style={styles.errorText}>{error}</Text>;
+  return (
+    <View style={styles.centeredContainer}>
+      <Text style={styles.title}>Bill Payments</Text>
+      {!selectedCategory ? (
+        <FlatList
+          data={categories}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <CustomButton title={item.name} onPress={() => handleSelectCategory(item.id)} isFullWidth />
+          )}
+        />
+      ) : !selectedBiller ? (
+        <FlatList
+          data={billers}
+          keyExtractor={(item) => item.id.toString()}
+          renderItem={({ item }) => (
+            <CustomButton title={item.name} onPress={() => setSelectedBiller(item.id)} isFullWidth />
+          )}
+        />
+      ) : (
+        <View>
+          <TextInput style={styles.input} placeholder="Amount" value={amount} onChangeText={setAmount} keyboardType="numeric" placeholderTextColor="#aaa" />
+          <CustomButton title="Pay Bill" onPress={handlePayBill} isFullWidth />
+        </View>
+      )}
+    </View>
+  );
+};
+
+const AdminScreen: React.FC<{ jwt: string }> = ({ jwt }) => {
+  const [newAdminUsername, setNewAdminUsername] = useState('');
+  const [newAdminPassword, setNewAdminPassword] = useState('');
+  const [userIdToDelete, setUserIdToDelete] = useState('');
+
+  const handleCreateAdmin = async () => {
+    if (!newAdminUsername || !newAdminPassword) return Alert.alert('Error', 'Please enter username and password');
+    try {
+      const response = await fetch(`${API_BASE}/admin/create_admin`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${jwt}` },
+        body: JSON.stringify({ username: newAdminUsername, password: newAdminPassword }),
+      });
+      const data = await response.json();
+      Alert.alert(response.ok ? 'Success' : 'Error', response.ok ? 'Admin created successfully' : data.message || 'Failed to create admin');
+    } catch {
+      Alert.alert('Error', 'Unable to connect');
+    }
+  };
+
+  const handleDeleteAccount = async () => {
+    if (!userIdToDelete) return Alert.alert('Error', 'Please enter a user ID');
+    try {
+      const response = await fetch(`${API_BASE}/admin/delete_account/${userIdToDelete}`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${jwt}` },
+      });
+      const data = await response.json();
+      Alert.alert(response.ok ? 'Success' : 'Error', response.ok ? 'Account deleted successfully' : data.message || 'Failed to delete account');
+    } catch {
+      Alert.alert('Error', 'Unable to connect');
+    }
+  };
+
+  return (
+    <View style={styles.centeredContainer}>
+      <Text style={styles.title}>Admin Panel</Text>
+      <Text style={styles.subtitle}>Create New Admin</Text>
+      <TextInput style={styles.input} placeholder="Username" value={newAdminUsername} onChangeText={setNewAdminUsername} placeholderTextColor="#aaa" />
+      <TextInput style={styles.input} placeholder="Password" value={newAdminPassword} onChangeText={setNewAdminPassword} secureTextEntry placeholderTextColor="#aaa" />
+      <CustomButton title="Create Admin" onPress={handleCreateAdmin} isFullWidth />
+      <Text style={styles.subtitle}>Delete Account</Text>
+      <TextInput style={styles.input} placeholder="User ID" value={userIdToDelete} onChangeText={setUserIdToDelete} keyboardType="numeric" placeholderTextColor="#aaa" />
+      <CustomButton title="Delete Account" onPress={handleDeleteAccount} isFullWidth />
+    </View>
+  );
+};
+
+// Reusable Components
+const CustomButton: React.FC<{ title: string; onPress: () => void; iconName?: string; isFullWidth?: boolean }> = ({ title, onPress, iconName, isFullWidth = false }) => {
+  const buttonStyle = isFullWidth ? styles.fullWidthButton : styles.customButton;
+  return (
+    <TouchableOpacity style={buttonStyle} onPress={onPress}>
+      {iconName && <Icon name={iconName} size={40} color="#fff" style={styles.buttonIcon} />}
+      <Text style={styles.buttonText}>{title}</Text>
+    </TouchableOpacity>
+  );
+};
+
+const Header: React.FC<{ onBackPress: () => void; onMenuPress: () => void }> = ({ onBackPress, onMenuPress }) => (
+  <View style={styles.header}>
+    <TouchableOpacity onPress={onBackPress}>
+      <Icon name="arrow-left" size={24} color="#fff" />
+    </TouchableOpacity>
+    <Text style={styles.headerText}>🏦 Dashboard</Text>
+    <TouchableOpacity onPress={onMenuPress}>
+      <Icon name="bars" size={24} color="#fff" />
+    </TouchableOpacity>
+  </View>
+);
+
+const MenuModal: React.FC<{ visible: boolean; onClose: () => void; onMenuItemPress: (key: string) => void; isAdmin: boolean; onLogout: () => void }> = ({ visible, onClose, onMenuItemPress, isAdmin, onLogout }) => (
+  <Modal animationType="slide" transparent visible={visible}>
+    <View style={styles.menuContainer}>
+      <View style={styles.menuBox}>
+        <TouchableOpacity onPress={() => onMenuItemPress('profile')}><Text style={styles.menuText}>Profile</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => onMenuItemPress('transfer')}><Text style={styles.menuText}>Money Transfer</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => onMenuItemPress('loans')}><Text style={styles.menuText}>Loans</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => onMenuItemPress('transactions')}><Text style={styles.menuText}>Transaction History</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => onMenuItemPress('cards')}><Text style={styles.menuText}>Virtual Cards</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => onMenuItemPress('bills')}><Text style={styles.menuText}>Bill Payments</Text></TouchableOpacity>
+        <TouchableOpacity onPress={() => onMenuItemPress('balance')}><Text style={styles.menuText}>Check Balance</Text></TouchableOpacity>
+        {isAdmin && <TouchableOpacity onPress={() => onMenuItemPress('admin')}><Text style={styles.menuText}>Admin Panel</Text></TouchableOpacity>}
+        <TouchableOpacity onPress={onLogout}><Text style={styles.logoutBtn}>Logout</Text></TouchableOpacity>
+        <Button title="Close" onPress={onClose} />
+      </View>
+    </View>
+  </Modal>
+);
+
+// Main App Component
+const API_BASE = 'https://vuln-bank-deploy.onrender.com';
+const HEADER_HEIGHT = Platform.OS === 'android' ? 50 : 70;
+
+type ScreenType = 'welcome' | 'login' | 'register' | 'dashboard' | 'transactions' | 'loans' | 'cards' | 'bills' | 'admin' | 'balance' | 'transfer' | 'profile';
+
+const App = () => {
+  const [screen, setScreen] = useState<ScreenType>('welcome');
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [username, setUsername] = useState('');
   const [jwt, setJwt] = useState<string | null>(null);
   const [accountNumber, setAccountNumber] = useState('');
-  const [transactions, setTransactions] = useState<any[]>([]);
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
     AsyncStorage.getItem('jwt').then(token => {
-      if (token) setJwt(token);
+      if (token) {
+        setJwt(token);
+        setScreen('dashboard');
+      }
     });
   }, []);
 
-  const login = async () => {
+  const handleLogin = async (username: string, password: string) => {
     try {
       const response = await fetch(`${API_BASE}/login`, {
         method: 'POST',
@@ -47,8 +482,10 @@ const App = () => {
       const data = await response.json();
       if (response.ok && data.token) {
         setJwt(data.token);
+        setUsername(username);
         setIsAdmin(username.toLowerCase() === 'admin');
         await AsyncStorage.setItem('jwt', data.token);
+        setAccountNumber(data.accountNumber || 'ADMIN001'); // Mocked for simplicity
         setScreen('dashboard');
       } else {
         Alert.alert('Login Failed', data.message || 'No token returned');
@@ -58,7 +495,7 @@ const App = () => {
     }
   };
 
-  const register = async () => {
+  const handleRegister = async (username: string, password: string) => {
     try {
       const response = await fetch(`${API_BASE}/register`, {
         method: 'POST',
@@ -77,345 +514,78 @@ const App = () => {
     }
   };
 
-  const fetchTransactions = async () => {
-    try {
-      const res = await fetch(`${API_BASE}/api/transactions?account_number=${accountNumber}`, {
-        headers: { Authorization: `Bearer ${jwt}` },
-      });
-      const data = await res.json();
-      if (res.ok) {
-        setTransactions(data.transactions || []);
-        setScreen('transactions');
-      } else {
-        Alert.alert('Error', data.message);
-      }
-    } catch {
-      Alert.alert('Error', 'Network issue');
+  const handleLogout = async () => {
+    await AsyncStorage.removeItem('jwt');
+    setJwt(null);
+    setUsername('');
+    setAccountNumber('');
+    setScreen('login');
+    setMenuVisible(false);
+  };
+
+  const renderScreen = () => {
+    switch (screen) {
+      case 'welcome': return <WelcomeScreen onLoginPress={() => setScreen('login')} onRegisterPress={() => setScreen('register')} />;
+      case 'login': return <LoginScreen onLogin={handleLogin} onRegisterPress={() => setScreen('register')} />;
+      case 'register': return <RegisterScreen onRegister={handleRegister} onLoginPress={() => setScreen('login')} />;
+      case 'dashboard': return <DashboardScreen username={username} onNavigate={setScreen} />;
+      case 'balance': return <BalanceScreen jwt={jwt!} accountNumber={accountNumber} />;
+      case 'transfer': return <TransferScreen jwt={jwt!} accountNumber={accountNumber} />;
+      case 'profile': return <ProfileScreen jwt={jwt!} username={username} />;
+      case 'transactions': return <TransactionsScreen jwt={jwt!} accountNumber={accountNumber} />;
+      case 'loans': return <LoansScreen jwt={jwt!} />;
+      case 'cards': return <CardsScreen jwt={jwt!} />;
+      case 'bills': return <BillsScreen jwt={jwt!} />;
+      case 'admin': return <AdminScreen jwt={jwt!} />;
+      default: return <Text>Unknown Screen</Text>;
     }
   };
 
-  const renderHeader = () => (
-    <View style={styles.fixedTopBar}>
-      <TouchableOpacity onPress={() => setScreen('dashboard')}>
-        <Icon name="arrow-left" size={24} color="#ccc" style={{ marginRight: 12 }} />
-      </TouchableOpacity>
-      <Text style={styles.headerText}>🏦 Dashboard</Text>
-      <TouchableOpacity onPress={() => setMenuVisible(true)}>
-        <Icon name="bars" size={24} color="#fff" style={{ marginLeft: 12 }} />
-      </TouchableOpacity>
-    </View>
-  );
+  const isAuthenticatedScreen = !['welcome', 'login', 'register'].includes(screen);
 
-  const renderMenu = () => (
-    <Modal animationType="slide" transparent visible={menuVisible}>
-      <View style={styles.menuContainer}>
-        <View style={styles.menuBox}>
-          {[{ name: 'Profile', key: 'profile' as const },
-            { name: 'Money Transfer', key: 'transfer' as const },
-            { name: 'Loans', key: 'loans' as const },
-            { name: 'Transaction History', key: 'transactions' as const },
-            { name: 'Virtual Cards', key: 'cards' as const },
-            { name: 'Bill Payments', key: 'bills' as const },
-            { name: 'Check Balance', key: 'balance' as const },
-            ...(isAdmin ? [{ name: 'Admin Panel', key: 'admin' as const }] : [])
-          ].map(({ name, key }, i) => (
-            <TouchableOpacity key={i} onPress={() => { setScreen(key); setMenuVisible(false); }}>
-              <Text style={styles.menuText}>{name}</Text>
-            </TouchableOpacity>
-          ))}
-
-          <TouchableOpacity onPress={async () => {
-            await AsyncStorage.removeItem('jwt');
-            setJwt(null);
-            setScreen('login');
-            setMenuVisible(false);
-          }}>
-            <Text style={styles.logoutBtn}>Logout</Text>
-          </TouchableOpacity>
-          <Button title="Close" onPress={() => setMenuVisible(false)} />
-        </View>
-      </View>
-    </Modal>
-  );
-
-  const renderPlaceholder = (label: string) => (
+  return (
     <SafeAreaView style={styles.screen}>
-      {renderHeader()}
-      <View style={styles.headerSpacer} />
-      <View style={styles.contentCenter}>
-        <Text style={styles.title}>{label} Page Coming Soon</Text>
+      {isAuthenticatedScreen && <Header onBackPress={() => setScreen('dashboard')} onMenuPress={() => setMenuVisible(true)} />}
+      <View style={isAuthenticatedScreen ? styles.contentWithHeader : styles.centeredContainer}>
+        {renderScreen()}
       </View>
-      {renderMenu()}
+      {isAuthenticatedScreen && (
+        <MenuModal
+          visible={menuVisible}
+          onClose={() => setMenuVisible(false)}
+          onMenuItemPress={(key) => { setScreen(key as ScreenType); setMenuVisible(false); }}
+          isAdmin={isAdmin}
+          onLogout={handleLogout}
+        />
+      )}
     </SafeAreaView>
   );
-
-  if (screen === 'welcome') {
-    return (
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.contentCenter}>
-          <Text style={styles.title}>👋 Welcome to Vulnerable Bank</Text>
-          <Text style={[styles.debugText, { fontSize: 16, marginBottom: 30 }]}>Made for Security Engineers to practice Application Security</Text>
-          <Button title="Login" onPress={() => setScreen('login')} />
-          <View style={{ marginTop: 10 }}>
-            <Button title="Register" onPress={() => setScreen('register')} />
-          </View>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (screen === 'register') {
-    return (
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.contentCenter}>
-          <Text style={styles.title}>📝 Create Account</Text>
-          <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} />
-          {/* <TextInput style={styles.input} placeholder="Email" value={email} onChangeText={setEmail} /> */}
-          <TextInput style={styles.input} placeholder="Password" value={password} secureTextEntry onChangeText={setPassword} />
-          <Button title="Register" onPress={register} />
-          <TouchableOpacity onPress={() => setScreen('login')}><Text style={styles.debugText}>Already have an account? Login</Text></TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (screen === 'login') {
-    return (
-      <SafeAreaView style={styles.screen}>
-        <View style={styles.contentCenter}>
-          <Text style={styles.title}>🔐 Vuln Bank Login</Text>
-          <TextInput style={styles.input} placeholder="Username" value={username} onChangeText={setUsername} />
-          <TextInput style={styles.input} placeholder="Password" value={password} secureTextEntry onChangeText={setPassword} />
-          <Button title="Login (Insecure)" onPress={login} />
-          <Text style={styles.debugText}>{`Debug API: ${API_BASE}${HIDDEN_DEBUG_ENDPOINT}`}</Text>
-          <Text style={styles.debugText}>{`Admin User: ${HARDCODED_ADMIN.username}/${HARDCODED_ADMIN.password}`}</Text>
-          <TouchableOpacity onPress={() => setScreen('register')}><Text style={styles.debugText}>Don't have an account? Register</Text></TouchableOpacity>
-          <TouchableOpacity onPress={() => Alert.alert('Reset Password', 'Functionality coming soon')}><Text style={styles.debugText}>Forgot Password? Reset here</Text></TouchableOpacity>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
-  if (screen === 'dashboard') {
-    return (
-      <SafeAreaView style={styles.screen}>
-        {renderHeader()}
-        <View style={styles.headerSpacer} />
-        <ScrollView contentContainerStyle={styles.dashboardContainer}>
-          {/* User profile section */}
-          <View style={styles.profileSection}>
-            <View style={styles.avatarContainer}>
-              <Icon name="user-circle" size={80} color="#ccc" />
-            </View>
-            <TouchableOpacity style={styles.uploadButton}>
-              <Text style={styles.uploadButtonText}>Upload photo</Text>
-            </TouchableOpacity>
-            <Text style={styles.welcomeText}>Welcome, {username}</Text>
-          </View>
-          
-          {/* Dashboard grid menu */}
-          <View style={styles.menuGrid}>
-            <View style={styles.menuRow}>
-              <TouchableOpacity style={styles.menuItem} onPress={() => setScreen('balance')}>
-                <Text style={styles.menuItemText}>Balance</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => setScreen('transfer')}>
-                <Text style={styles.menuItemText}>Transfer</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.menuRow}>
-              <TouchableOpacity style={styles.menuItem} onPress={() => setScreen('loans')}>
-                <Text style={styles.menuItemText}>Loan</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.menuItem} onPress={() => setScreen('transactions')}>
-                <Text style={styles.menuItemText}>Transaction History</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          
-          {/* Home button indicator */}
-          <View style={styles.homeIndicator}>
-            <View style={styles.homeIndicatorButton} />
-          </View>
-        </ScrollView>
-        {renderMenu()}
-      </SafeAreaView>
-    );
-  }
-
-  if (screen === 'transactions') {
-    return (
-      <SafeAreaView style={styles.screen}>
-        {renderHeader()}
-        <View style={styles.headerSpacer} />
-        <ScrollView contentContainerStyle={styles.contentCenter}>
-          <Text style={styles.title}>📄 Transactions</Text>
-          {transactions.map((tx, i) => (
-            <View key={i} style={styles.result}>
-              <Text style={styles.resultText}>From: {tx.from_account}</Text>
-              <Text style={styles.resultText}>To: {tx.to_account}</Text>
-              <Text style={styles.resultText}>Amount: ₦{tx.amount}</Text>
-              <Text style={styles.resultText}>Type: {tx.transaction_type}</Text>
-              <Text style={styles.resultText}>Time: {tx.timestamp}</Text>
-            </View>
-          ))}
-        </ScrollView>
-        {renderMenu()}
-      </SafeAreaView>
-    );
-  }
-
-  return renderPlaceholder(screen.charAt(0).toUpperCase() + screen.slice(1));
 };
 
-const HEADER_HEIGHT = (Platform.OS === 'android' ? 40 : 60) + 10;
-
 const styles = StyleSheet.create({
-  screen: {
-    flex: 1,
-    backgroundColor: '#121212',
-  },
-  contentCenter: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    padding: 20,
-  },
-  dashboardContainer: {
-    flex: 1,
-    alignItems: 'center',
-    padding: 20,
-  },
-  profileSection: {
-    alignItems: 'center',
-    marginVertical: 20,
-  },
-  avatarContainer: {
-    marginBottom: 10,
-  },
-  uploadButton: {
-    backgroundColor: '#0074D9',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    borderRadius: 5,
-    marginVertical: 10,
-  },
-  uploadButtonText: {
-    color: '#ffffff',
-    fontWeight: 'bold',
-  },
-  welcomeText: {
-    color: '#ffffff',
-    fontSize: 18,
-    marginTop: 10,
-  },
-  menuGrid: {
-    width: '100%',
-    marginTop: 20,
-  },
-  menuRow: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginBottom: 15,
-  },
-  menuItem: {
-    backgroundColor: '#ffffff',
-    width: '48%',
-    height: 80,
-    borderRadius: 10,
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 1,
-    borderColor: '#e0e0e0',
-  },
-  menuItemText: {
-    fontSize: 16,
-    fontWeight: 'bold',
-  },
-  homeIndicator: {
-    alignItems: 'center',
-    marginTop: 40,
-  },
-  homeIndicatorButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: '#000000',
-  },
-  fixedTopBar: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 10,
-    backgroundColor: '#121212',
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingHorizontal: 15,
-    paddingTop: Platform.OS === 'android' ? 40 : 60,
-    paddingBottom: 10,
-  },
-  headerText: {
-    color: '#fff',
-    fontSize: 20,
-    flex: 1,
-    textAlign: 'center',
-  },
-  headerSpacer: {
-    height: HEADER_HEIGHT,
-  },
-  title: {
-    fontSize: 24,
-    color: '#fff',
-    marginBottom: 20,
-    textAlign: 'center',
-  },
-  input: {
-    backgroundColor: '#fff',
-    padding: 10,
-    marginBottom: 12,
-    borderRadius: 6,
-    width: '100%',
-  },
-  result: {
-    backgroundColor: '#1f1f1f',
-    padding: 15,
-    marginTop: 20,
-    borderRadius: 10,
-    width: '100%',
-  },
-  resultText: {
-    color: '#fff',
-    marginBottom: 6,
-  },
-  debugText: {
-    color: '#999',
-    marginTop: 10,
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  menuContainer: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  menuBox: {
-    backgroundColor: '#fff',
-    padding: 20,
-    width: '80%',
-    height: '100%',
-  },
-  menuText: {
-    fontSize: 18,
-    marginBottom: 15,
-  },
-  logoutBtn: {
-    color: 'red',
-    fontWeight: 'bold',
-    marginVertical: 15,
-    fontSize: 16,
-  },
+  screen: { flex: 1, backgroundColor: '#121212' },
+  centeredContainer: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20 },
+  contentWithHeader: { marginTop: HEADER_HEIGHT, flex: 1 },
+  title: { fontSize: 32, color: '#fff', marginBottom: 30, textAlign: 'center' },
+  input: { backgroundColor: '#333', color: '#fff', padding: 10, marginBottom: 15, borderRadius: 5, width: '100%', fontSize: 16 },
+  header: { position: 'absolute', top: 0, left: 0, right: 0, backgroundColor: '#121212', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 15, paddingTop: Platform.OS === 'android' ? 40 : 60, paddingBottom: 10, zIndex: 10 },
+  headerText: { color: '#fff', fontSize: 20, flex: 1, textAlign: 'center' },
+  menuContainer: { flex: 1, justifyContent: 'flex-start', backgroundColor: 'rgba(0,0,0,0.4)' },
+  menuBox: { backgroundColor: '#fff', padding: 20, width: '80%', height: '100%' },
+  menuText: { fontSize: 18, marginBottom: 15 },
+  logoutBtn: { color: 'red', fontWeight: 'bold', marginVertical: 15, fontSize: 16 },
+  buttonGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', marginTop: 20 },
+  customButton: { backgroundColor: '#007AFF', width: 100, height: 100, borderRadius: 10, justifyContent: 'center', alignItems: 'center', margin: 10 },
+  fullWidthButton: { backgroundColor: '#007AFF', paddingVertical: 15, borderRadius: 5, alignItems: 'center', marginBottom: 10, width: '100%' },
+  buttonText: { color: '#fff', fontSize: 16, textAlign: 'center' },
+  buttonIcon: { marginBottom: 5 },
+  balanceText: { fontSize: 32, color: '#fff', fontWeight: 'bold' },
+  username: { fontSize: 18, color: '#fff', marginBottom: 20 },
+  loadingText: { color: '#fff', textAlign: 'center' },
+  errorText: { color: 'red', textAlign: 'center' },
+  transactionItem: { backgroundColor: '#1f1f1f', padding: 15, marginBottom: 10, borderRadius: 10 },
+  cardItem: { backgroundColor: '#1f1f1f', padding: 15, marginBottom: 10, borderRadius: 10 },
+  subtitle: { fontSize: 18, color: '#fff', marginTop: 20, marginBottom: 10 },
 });
 
 export default App;
