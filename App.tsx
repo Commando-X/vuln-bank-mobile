@@ -6,7 +6,7 @@ import Icon from 'react-native-vector-icons/FontAwesome';
 // Screen Components
 const WelcomeScreen: React.FC<{ onLoginPress: () => void; onRegisterPress: () => void }> = ({ onLoginPress, onRegisterPress }) => (
   <View style={styles.centeredContainer}>
-    <Text style={styles.title}>Welcome</Text>
+    <Text style={styles.title}>Welcome to Vulnerable Bank</Text>
     <CustomButton title="Login" onPress={onLoginPress} isFullWidth />
     <CustomButton title="Register" onPress={onRegisterPress} isFullWidth />
   </View>
