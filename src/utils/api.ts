@@ -1,5 +1,5 @@
 // API Base URL
-export const API_BASE = 'https://vuln-bank-deploy.onrender.com';
+export const API_BASE = 'https://vulnbank.org';
 
 // API Endpoints
 export const ENDPOINTS = {
