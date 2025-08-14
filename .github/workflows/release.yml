@@ -32,6 +32,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/gradle-build-action@v2.4.2
 
+      - name: Install JS dependencies
+        run: npm install
+
       - name: Build Android app (from subfolder)
         working-directory: ./android
         run: ./gradlew assembleRelease
