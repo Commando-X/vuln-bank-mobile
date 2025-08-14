@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Prepare NDK dir for caching ( workaround for https://github.com/actions/virtual-environments/issues/1337 )
+      - name: Prepare NDK dir for caching ( workarounds for https://github.com/actions/virtual-environments/issues/1337 )
         run: |
           sudo mkdir -p /usr/local/lib/android/sdk/ndk
           sudo chmod -R 777 /usr/local/lib/android/sdk/ndk
@@ -27,38 +27,28 @@ jobs:
       - uses: actions/setup-java@v3
         with:
           distribution: temurin
-          java-version: 11
+          java-version: 17
 
-      - name: Build Android app
+      - name: Setup Gradle
         uses: gradle/gradle-build-action@v2.4.2
-        with:
-          arguments: assembleRelease
-          gradle-version: 7.3.3
 
-      - name: Install Uber APK Signer
-        run: |
-          wget https://github.com/patrickfav/uber-apk-signer/releases/download/v1.3.0/uber-apk-signer-1.3.0.jar
+      - name: Install JS dependencies
+        run: npm install
 
-      - name: Sign APK
-        run: |
-          java -jar ./uber-apk-signer-1.3.0.jar --apks ./app/build/outputs/apk/release/app-release-unsigned.apk -o ostorlab_insecure_app
+      - name: Build Android app (from subfolder)
+        working-directory: ./android
+        run: ./gradlew assembleRelease
 
       - name: Move to release
         run: |
-          cp ./ostorlab_insecure_app/app-release-aligned-debugSigned.apk ostorlab_insecure_app.apk
+          cp ./android/app/build/outputs/apk/release/app-release.apk vuln_bank_mobile_app.apk
 
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            ./ostorlab_insecure_app.apk
-
-      - name: Launch Ostorlab Full Scan with just Login Credentials
+      - name: Launch Ostorlab Full Scan with just Login Credential
         uses: Ostorlab/ostorlab_actions@v2.0.0
         with:
           scan_profile: full_scan
           asset_type: android-apk
-          target: ./ostorlab_insecure_app.apk
+          target: ./vuln_bank_mobile_app.apk
           scan_title: Ostorlab Insecure App Workflow
           ostorlab_api_key: ${{ secrets.OSTORLAB_API_KEY }}
           extra: --test-credentials-name "phone_number" --test-credentials-value 2312132 --test-credentials-name "pin" --test-credentials-value 213212
