@@ -49,20 +49,14 @@ jobs:
 
       - name: Move to release
         run: |
-          cp ./ostorlab_insecure_app/app-release-aligned-debugSigned.apk ostorlab_insecure_app.apk
-
-      - name: Release
-        uses: softprops/action-gh-release@v1
-        with:
-          files: |
-            ./ostorlab_insecure_app.apk
+          cp ./android/*.apk vuln_bank_mobile_app.apk
 
       - name: Launch Ostorlab Full Scan with just Login Credential
         uses: Ostorlab/ostorlab_actions@v2.0.0
         with:
           scan_profile: full_scan
           asset_type: android-apk
-          target: ./ostorlab_insecure_app.apk
+          target: ./vuln_bank_mobile_app.apk
           scan_title: Ostorlab Insecure App Workflow
           ostorlab_api_key: ${{ secrets.OSTORLAB_API_KEY }}
           extra: --test-credentials-name "phone_number" --test-credentials-value 2312132 --test-credentials-name "pin" --test-credentials-value 213212
