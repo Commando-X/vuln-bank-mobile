@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
-      - name: Prepare NDK dir for caching ( workaround for https://github.com/actions/virtual-environments/issues/1337 )
+      - name: Prepare NDK dir for caching ( workarounds for https://github.com/actions/virtual-environments/issues/1337 )
         run: |
           sudo mkdir -p /usr/local/lib/android/sdk/ndk
           sudo chmod -R 777 /usr/local/lib/android/sdk/ndk
@@ -34,6 +34,7 @@ jobs:
         with:
           arguments: assembleRelease
           gradle-version: 7.3.3
+        working-directory: ./android
 
       - name: Install Uber APK Signer
         run: |
