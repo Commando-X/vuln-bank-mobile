@@ -45,7 +45,7 @@ jobs:
 
       - name: Sign APK
         run: |
-          java -jar ./uber-apk-signer-1.3.0.jar --apks ./app/build/outputs/apk/release/app-release-unsigned.apk -o ostorlab_insecure_app
+          java -jar ./uber-apk-signer-1.3.0.jar --apks ./android/app/build/outputs/apk/release/*.apk -o vuln_bank_mobile_app
 
       - name: Move to release
         run: |
