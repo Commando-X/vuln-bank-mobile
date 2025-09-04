@@ -143,3 +143,11 @@ Security Engineer • API Security Advocate • Mobile AppSec Educator
 ## 🏁 License
 
 MIT — use it, break it, teach with it 🧠
+
+## 📖 Write‑up
+
+A detailed assessment and walkthrough of this application has been documented:
+
+🔗 [Check out the full write‑up here](https://medium.com/@kspicykunle/mobile-application-security-assessment-report-vulnerable-bank-app-10b538d0caec)
+
+Special thanks to Al‑Amir Badmus for developing this app.
