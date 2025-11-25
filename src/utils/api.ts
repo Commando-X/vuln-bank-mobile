@@ -34,10 +34,19 @@ export const ENDPOINTS = {
   profile: {
     get: '/profile',  // Placeholder
     update: '/profile/update',  // Placeholder
+    upload: '/upload_profile_picture',
+    uploadByUrl: '/upload_profile_picture_url',
   },
   resetPassword: {
-    request: '/api/v2/forgot-password',
-    reset: '/api/v2/reset-password',
+    request: '/api/v3/forgot-password',
+    reset: '/api/v3/reset-password',
+  },
+  ssrf: {
+    internalSecret: '/internal/secret',
+    internalConfig: '/internal/config.json',
+    metadataRoot: '/latest/meta-data/',
+    metadataCreds: '/latest/meta-data/iam/security-credentials/',
+    metadataRole: '/latest/meta-data/iam/security-credentials/vulnbank-role',
   },
 };
 

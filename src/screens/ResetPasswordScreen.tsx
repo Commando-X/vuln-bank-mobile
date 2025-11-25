@@ -82,12 +82,12 @@ const ResetPasswordScreen: React.FC<ResetPasswordScreenProps> = ({ onNavigate })
           <Text style={styles.label}>Reset PIN</Text>
           <TextInput
             style={globalStyles.input}
-            placeholder="Enter 3-digit PIN"
+            placeholder="Enter 4-digit PIN"
             placeholderTextColor={COLORS.textLight}
             value={resetPin}
             onChangeText={setResetPin}
             keyboardType="number-pad"
-            maxLength={3}
+            maxLength={4}
           />
         </View>
         

@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Switch } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, Alert, ActivityIndicator, ScrollView, Switch, TextInput } from 'react-native';
 import Icon from 'react-native-vector-icons/FontAwesome';
 import CustomButton from '../components/CustomButton';
 import { ScreenType } from '../navigation/types';
 import { useAuth } from '../contexts/AuthContext';
+import { ENDPOINTS, get, post } from '../utils/api';
 import globalStyles from '../styles/globalStyles';
 import theme from '../styles/theme';
 
@@ -16,6 +17,12 @@ interface ProfileScreenProps {
 const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
   const { user, logout } = useAuth();
   const [loading, setLoading] = useState(false);
+  const [imageUrl, setImageUrl] = useState('');
+  const [uploading, setUploading] = useState(false);
+  const [uploadMessage, setUploadMessage] = useState<string | null>(null);
+  const [ssrfTarget, setSsrfTarget] = useState(ENDPOINTS.ssrf.internalSecret);
+  const [ssrfResponse, setSsrfResponse] = useState<string | null>(null);
+  const [ssrfLoading, setSsrfLoading] = useState(false);
   
   // Settings toggles
   const [pushNotifications, setPushNotifications] = useState(true);
@@ -46,6 +53,67 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
         }
       ]
     );
+  };
+
+  const handleUploadByUrl = async () => {
+    if (!imageUrl) {
+      Alert.alert('Error', 'Please provide an image URL');
+      return;
+    }
+
+    setUploading(true);
+    setUploadMessage(null);
+
+    try {
+      const response = await post(
+        ENDPOINTS.profile.uploadByUrl,
+        { image_url: imageUrl },
+        user?.token
+      );
+
+      if (response.ok) {
+        setUploadMessage(response.data.message || 'Profile picture uploaded via URL');
+        Alert.alert('Success', 'Profile image fetched and saved');
+      } else {
+        const msg = response.data.message || 'Upload failed';
+        setUploadMessage(msg);
+        Alert.alert('Error', msg);
+      }
+    } catch (error) {
+      setUploadMessage('Network error or server unavailable');
+      Alert.alert('Error', 'Network error or server unavailable');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleFetchSsrf = async () => {
+    if (!ssrfTarget) {
+      Alert.alert('Error', 'Please provide a target path');
+      return;
+    }
+
+    setSsrfLoading(true);
+    setSsrfResponse(null);
+
+    try {
+      const endpoint = ssrfTarget.startsWith('/') ? ssrfTarget : `/${ssrfTarget}`;
+      const response = await get(endpoint, user?.token);
+      const formatted =
+        typeof response.data === 'string'
+          ? response.data
+          : JSON.stringify(response.data, null, 2);
+      setSsrfResponse(formatted);
+
+      if (!response.ok) {
+        Alert.alert('Request Error', response.data?.message || 'Request failed');
+      }
+    } catch (error) {
+      setSsrfResponse('Network error or server unavailable');
+      Alert.alert('Error', 'Network error or server unavailable');
+    } finally {
+      setSsrfLoading(false);
+    }
   };
 
   return (
@@ -107,6 +175,102 @@ const ProfileScreen: React.FC<ProfileScreenProps> = ({ onNavigate }) => {
             <Text style={styles.detailValue}>{user?.isAdmin ? 'Administrator' : 'Regular User'}</Text>
           </View>
         </View>
+      </View>
+
+      {/* Profile Picture Upload */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>Profile Picture</Text>
+        <Text style={styles.helperText}>
+          Upload by URL (vulnerable fetch on the server). Great for testing SSRF.
+        </Text>
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Image URL</Text>
+          <TextInput
+            style={globalStyles.input}
+            placeholder="http://127.0.0.1:8080/image.png"
+            placeholderTextColor={COLORS.textLight}
+            value={imageUrl}
+            onChangeText={setImageUrl}
+            autoCapitalize="none"
+          />
+        </View>
+        {uploading ? (
+          <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+        ) : (
+          <CustomButton
+            title="Fetch & Upload"
+            onPress={handleUploadByUrl}
+            isFullWidth
+            iconName="upload"
+          />
+        )}
+        {uploadMessage && (
+          <Text style={styles.statusMessage}>{uploadMessage}</Text>
+        )}
+      </View>
+
+      {/* SSRF Playground */}
+      <View style={styles.card}>
+        <Text style={styles.cardTitle}>SSRF Playground</Text>
+        <Text style={styles.helperText}>
+          Trigger server-side requests against internal endpoints.
+        </Text>
+
+        <View style={styles.quickTargets}>
+          <TouchableOpacity
+            style={styles.targetChip}
+            onPress={() => setSsrfTarget(ENDPOINTS.ssrf.internalSecret)}
+          >
+            <Text style={styles.chipText}>/internal/secret</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.targetChip}
+            onPress={() => setSsrfTarget(ENDPOINTS.ssrf.internalConfig)}
+          >
+            <Text style={styles.chipText}>/internal/config.json</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.targetChip}
+            onPress={() => setSsrfTarget(ENDPOINTS.ssrf.metadataRoot)}
+          >
+            <Text style={styles.chipText}>/latest/meta-data/</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.targetChip}
+            onPress={() => setSsrfTarget(ENDPOINTS.ssrf.metadataRole)}
+          >
+            <Text style={styles.chipText}>/latest/.../vulnbank-role</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={styles.formGroup}>
+          <Text style={styles.label}>Target Path</Text>
+          <TextInput
+            style={globalStyles.input}
+            placeholder="/internal/secret"
+            placeholderTextColor={COLORS.textLight}
+            value={ssrfTarget}
+            onChangeText={setSsrfTarget}
+            autoCapitalize="none"
+          />
+        </View>
+
+        {ssrfLoading ? (
+          <ActivityIndicator size="large" color={COLORS.primary} style={styles.loader} />
+        ) : (
+          <CustomButton
+            title="Fetch Target"
+            onPress={handleFetchSsrf}
+            isFullWidth
+            iconName="bug"
+          />
+        )}
+
+        {ssrfResponse && (
+          <View style={styles.responseBox}>
+            <Text style={styles.responseText}>{ssrfResponse}</Text>
+          </View>
+        )}
       </View>
       
       {/* Settings */}
@@ -320,6 +484,11 @@ const styles = StyleSheet.create({
     fontSize: SIZES.small,
     color: COLORS.textLight,
   },
+  helperText: {
+    fontSize: SIZES.small,
+    color: COLORS.textLight,
+    marginBottom: SIZES.spacing.sm,
+  },
   actionItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -343,6 +512,45 @@ const styles = StyleSheet.create({
   },
   loader: {
     marginVertical: SIZES.spacing.md,
+  },
+  formGroup: {
+    marginBottom: SIZES.spacing.md,
+  },
+  statusMessage: {
+    fontSize: SIZES.small,
+    color: COLORS.textLight,
+    marginTop: SIZES.spacing.sm,
+  },
+  quickTargets: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: SIZES.spacing.md,
+  },
+  targetChip: {
+    backgroundColor: COLORS.cardDark,
+    paddingVertical: SIZES.spacing.xs,
+    paddingHorizontal: SIZES.spacing.sm,
+    borderRadius: SIZES.radius.sm,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+    marginRight: SIZES.spacing.sm,
+    marginBottom: SIZES.spacing.sm,
+  },
+  chipText: {
+    color: COLORS.white,
+    fontSize: SIZES.small,
+  },
+  responseBox: {
+    marginTop: SIZES.spacing.md,
+    backgroundColor: COLORS.backgroundDark,
+    borderRadius: SIZES.radius.md,
+    padding: SIZES.spacing.md,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  responseText: {
+    color: COLORS.textLight,
+    fontSize: SIZES.small,
   },
 });
 
